@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.3.2
+- Fixes Homebridge UI config rendering and improves field guidance.
+
 ## 0.3.1
 - Expands default command list to include common positions and incremental controls.
 - Notes Safety Light toggle vs stateful behavior in README.

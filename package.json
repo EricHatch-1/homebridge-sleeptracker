@@ -1,5 +1,5 @@
 {
-  "name": "homebridge-sleeptracker",
+  "name": "homebridge-sleeptracker-bed",
   "displayName": "Sleeptracker",
   "version": "0.3.0",
   "description": "Homebridge plugin for Sleeptracker adjustable bases (Tempur/Sleeptracker).",

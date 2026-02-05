@@ -1,4 +1,4 @@
-# homebridge-sleeptracker
+# homebridge-sleeptracker-bed
 
 Homebridge plugin that exposes Sleeptracker adjustable base commands to Apple Home.
 
@@ -19,12 +19,12 @@ Notes:
 ## Install
 
 ### Homebridge UI (recommended)
-1. Homebridge UI → **Plugins** → search `homebridge-sleeptracker` → Install
+1. Homebridge UI → **Plugins** → search `homebridge-sleeptracker-bed` → Install
 2. Configure it (see below)
 
 ### CLI
 ```bash
-npm i -g homebridge-sleeptracker
+npm i -g homebridge-sleeptracker-bed
 ```
 
 ### Docker note

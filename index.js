@@ -3,7 +3,7 @@
 const axios = require('axios');
 
 const PLATFORM_NAME = 'Sleeptracker';
-const PLUGIN_NAME = 'homebridge-sleeptracker';
+const PLUGIN_NAME = 'homebridge-sleeptracker-bed';
 
 const AUTH_BASE_DEFAULT = 'https://auth.tsi.sleeptracker.com/v1/app';
 const FPCSIOT_BASE_DEFAULT = 'https://app.tsi.sleeptracker.com/actrack-client/v2/fpcsiot';

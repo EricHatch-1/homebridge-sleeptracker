@@ -1,0 +1,74 @@
+{
+  "pluginAlias": "Sleeptracker",
+  "pluginType": "platform",
+  "singular": true,
+  "headerDisplay": "Sleeptracker Adjustable Base",
+  "footerDisplay": "Creates momentary switches in Apple Home.",
+  "schema": {
+    "type": "object",
+    "required": ["email", "password"],
+    "properties": {
+      "name": {
+        "title": "Name",
+        "type": "string",
+        "default": "Sleeptracker"
+      },
+      "email": {
+        "title": "Email",
+        "type": "string"
+      },
+      "password": {
+        "title": "Password",
+        "type": "string"
+      },
+      "namespace": {
+        "title": "Namespace (optional)",
+        "type": "string",
+        "default": ""
+      },
+      "processorId": {
+        "title": "Processor ID (optional)",
+        "type": ["integer", "null"],
+        "default": null
+      },
+      "authClientId": {
+        "title": "Auth client id",
+        "type": "string",
+        "default": "E3MlC3qvwJbsWo"
+      },
+      "appClientVersion": {
+        "title": "App client version",
+        "type": "string",
+        "default": "3.2.5"
+      },
+      "exposeEnvironment": {
+        "title": "Expose environment sensors",
+        "type": "boolean",
+        "default": true
+      },
+      "commands": {
+        "title": "Commands",
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["name", "command"],
+          "properties": {
+            "name": {"type": "string", "title": "Name"},
+            "command": {"type": "integer", "title": "Command"},
+            "massageAdjustment": {"type": ["integer", "null"], "title": "Massage adjustment", "default": null},
+            "requestStatus": {"type": ["boolean", "null"], "title": "Request status", "default": null}
+          }
+        },
+        "default": [
+          {"name": "Flat", "command": 2},
+          {"name": "Zero-G", "command": 0},
+          {"name": "Favorite 1", "command": 6},
+          {"name": "Favorite 2", "command": 9},
+          {"name": "Toggle Bed Light", "command": 230},
+          {"name": "Massage On", "command": 200},
+          {"name": "Massage Off", "command": 201}
+        ]
+      }
+    }
+  }
+}

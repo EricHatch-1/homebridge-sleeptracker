@@ -1,0 +1,47 @@
+{
+  "name": "homebridge-sleeptracker",
+  "displayName": "Sleeptracker",
+  "version": "0.3.0",
+  "description": "Homebridge plugin for Sleeptracker adjustable bases (Tempur/Sleeptracker).",
+  "main": "index.js",
+  "homepage": "https://github.com/EricHatch-1/homebridge-sleeptracker#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/EricHatch-1/homebridge-sleeptracker.git"
+  },
+  "bugs": {
+    "url": "https://github.com/EricHatch-1/homebridge-sleeptracker/issues"
+  },
+  "files": [
+    "index.js",
+    "config.schema.json",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "SECURITY.md"
+  ],
+  "license": "MIT",
+  "author": "Eric Hatch",
+  "keywords": [
+    "homebridge-plugin",
+    "homebridge",
+    "sleeptracker",
+    "tempur",
+    "smartbed"
+  ],
+  "engines": {
+    "node": ">=20.0.0",
+    "homebridge": ">=1.8.0"
+  },
+  "scripts": {
+    "test": "jest",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "axios": "^1.7.9"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0",
+    "jest": "^29.7.0"
+  }
+}

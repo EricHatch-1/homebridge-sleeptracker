@@ -309,7 +309,7 @@ class SleeptrackerMomentarySwitch {
         this._isOn = !!v;
         return this._isOn;
       } catch (e) {
-        this.log.warn(`Safety Light status failed: ${e?.message || e}`);
+        this.log.warn(`Bed Light status failed: ${e?.message || e}`);
         return this._isOn;
       }
     }
@@ -331,7 +331,7 @@ class SleeptrackerMomentarySwitch {
           this._isOn = !!v;
         }
       } catch (e) {
-        this.log.error(`Safety Light failed: ${e?.message || e}`);
+        this.log.error(`Bed Light failed: ${e?.message || e}`);
       }
       this.service.updateCharacteristic(this.platform.Characteristic.On, this._isOn);
       return;

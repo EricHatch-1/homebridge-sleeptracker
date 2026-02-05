@@ -65,7 +65,6 @@
           "properties": {
             "name": {"type": "string", "title": "Name", "required": true},
             "command": {"type": "integer", "title": "Command", "required": true},
-            "massageAdjustment": {"type": "integer", "title": "Massage adjustment (optional)"},
             "requestStatus": {"type": "boolean", "title": "Request status (optional)"}
           }
         },

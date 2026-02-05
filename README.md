@@ -61,6 +61,7 @@ Notes:
 - `exposeEnvironment` (default true) exposes Temperature/Humidity/CO2/VOC/Air Quality as HomeKit sensors.
 - Credentials live in your Homebridge config; **don’t share** `config.json` publicly.
 - If you change the `commands` list, Homebridge may keep old cached accessories. In that case, remove the stale accessories in the Home app, or delete the cached accessories in Homebridge and restart.
+- The Safety Light uses the same command (`230`) for both a momentary **Toggle Bed Light** switch and the **stateful Safety Light** behavior. Keep whichever behavior matches your preference.
 
 ## Command reference (common)
 - Flat: 2

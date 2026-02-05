@@ -62,11 +62,25 @@
         "default": [
           {"name": "Flat", "command": 2},
           {"name": "Zero-G", "command": 0},
+          {"name": "TV Position", "command": 3},
+          {"name": "Anti-Snore", "command": 4},
           {"name": "Favorite 1", "command": 6},
           {"name": "Favorite 2", "command": 9},
           {"name": "Toggle Bed Light", "command": 230},
           {"name": "Massage On", "command": 200},
-          {"name": "Massage Off", "command": 201}
+          {"name": "Massage Off", "command": 201},
+          {"name": "Massage Pattern Step", "command": 226},
+          {"name": "Head Up (Increment)", "command": 110},
+          {"name": "Head Down (Increment)", "command": 111},
+          {"name": "Foot Up (Increment)", "command": 112},
+          {"name": "Foot Down (Increment)", "command": 113},
+          {"name": "Lumbar Up (Increment)", "command": 114},
+          {"name": "Lumbar Down (Increment)", "command": 115},
+          {"name": "Stop All", "command": 1},
+          {"name": "Stop Everything", "command": 31},
+          {"name": "Head Stop", "command": 107},
+          {"name": "Foot Stop", "command": 108},
+          {"name": "Lumbar Stop", "command": 106}
         ]
       }
     }

@@ -6,57 +6,67 @@
   "footerDisplay": "Creates momentary switches in Apple Home.",
   "schema": {
     "type": "object",
-    "required": ["email", "password"],
     "properties": {
       "name": {
         "title": "Name",
         "type": "string",
+        "required": true,
+        "minLength": 1,
         "default": "Sleeptracker"
       },
       "email": {
         "title": "Email",
-        "type": "string"
+        "type": "string",
+        "format": "email",
+        "required": true,
+        "placeholder": "you@example.com"
       },
       "password": {
         "title": "Password",
-        "type": "string"
+        "type": "string",
+        "format": "password",
+        "required": true
       },
       "namespace": {
         "title": "Namespace (optional)",
         "type": "string",
+        "description": "Only required for some accounts/regions.",
         "default": ""
       },
       "processorId": {
         "title": "Processor ID (optional)",
-        "type": ["integer", "null"],
-        "default": null
+        "type": "integer",
+        "description": "Leave blank to auto-detect."
       },
       "authClientId": {
-        "title": "Auth client id",
+        "title": "Auth client id (advanced)",
         "type": "string",
+        "description": "Defaults to the official app client id. Change only if instructed.",
         "default": "E3MlC3qvwJbsWo"
       },
       "appClientVersion": {
-        "title": "App client version",
+        "title": "App client version (advanced)",
         "type": "string",
+        "description": "Defaults to the official app version. Change only if instructed.",
         "default": "3.2.5"
       },
       "exposeEnvironment": {
         "title": "Expose environment sensors",
         "type": "boolean",
+        "description": "Temperature, humidity, CO2, VOC, and air quality sensors.",
         "default": true
       },
       "commands": {
         "title": "Commands",
         "type": "array",
+        "description": "HomeKit switches to create. Most commands are momentary.",
         "items": {
           "type": "object",
-          "required": ["name", "command"],
           "properties": {
-            "name": {"type": "string", "title": "Name"},
-            "command": {"type": "integer", "title": "Command"},
-            "massageAdjustment": {"type": ["integer", "null"], "title": "Massage adjustment", "default": null},
-            "requestStatus": {"type": ["boolean", "null"], "title": "Request status", "default": null}
+            "name": {"type": "string", "title": "Name", "required": true},
+            "command": {"type": "integer", "title": "Command", "required": true},
+            "massageAdjustment": {"type": "integer", "title": "Massage adjustment (optional)"},
+            "requestStatus": {"type": "boolean", "title": "Request status (optional)"}
           }
         },
         "default": [

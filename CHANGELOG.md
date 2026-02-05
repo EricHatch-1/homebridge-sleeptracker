@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.3.3
+- Removes massage adjustment from the Homebridge UI config.
+
 ## 0.3.2
 - Fixes Homebridge UI config rendering and improves field guidance.
 

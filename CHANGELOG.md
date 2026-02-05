@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.1
+- Expands default command list to include common positions and incremental controls.
+- Notes Safety Light toggle vs stateful behavior in README.
+
 ## 0.3.0
 - Adds environmental sensors (temperature, humidity, CO2, VOC, IAQ) via `/processor/latestEnvironmentSensorData`.
 - Exposes Air Quality as both a raw IAQ value (in logs/attributes) and HomeKit AirQuality levels.

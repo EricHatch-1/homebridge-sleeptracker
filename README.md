@@ -1,5 +1,7 @@
 # homebridge-sleeptracker-bed
 
+![Sleeptracker icon](https://raw.githubusercontent.com/EricHatch-1/homebridge-sleeptracker/main/assets/icon-100.png)
+
 Homebridge plugin that exposes Sleeptracker adjustable base commands to Apple Home.
 
 ## Requirements

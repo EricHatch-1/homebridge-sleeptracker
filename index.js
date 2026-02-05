@@ -162,6 +162,13 @@ class SleeptrackerClient {
       sleeptrackerProcessorID: pid,
     });
   }
+
+  async getState() {
+    const pid = await this.resolveProcessorId();
+    return await this._call('/processor/getState', {
+      sleeptrackerProcessorID: pid,
+    });
+  }
 }
 
 function mapIaqToHomeKitAirQuality(iaqValue) {
@@ -298,6 +305,13 @@ class SleeptrackerMomentarySwitch {
     this._isOn = false;
   }
 
+  setExternalState(on) {
+    const value = !!on;
+    if (this._isOn === value) return;
+    this._isOn = value;
+    this.service.updateCharacteristic(this.platform.Characteristic.On, value);
+  }
+
   async handleGet() {
     // Only the Safety Light (toggle command 230) is stateful.
     if (Number(this.cmd.command) === 230) {
@@ -374,6 +388,7 @@ class SleeptrackerPlatform {
 
     this.isConfigured = Boolean(this.config.email && this.config.password);
     this.accessories = [];
+    this._bedLightSwitches = [];
 
     if (!this.config.email || !this.config.password) {
       this.log.warn('Missing email/password; plugin will not create accessories');
@@ -389,6 +404,9 @@ class SleeptrackerPlatform {
     this.api.on('shutdown', () => {
       if (this._envInterval) {
         clearInterval(this._envInterval);
+      }
+      if (this._statusInterval) {
+        clearInterval(this._statusInterval);
       }
     });
   }
@@ -407,6 +425,13 @@ class SleeptrackerPlatform {
       const pid = await this.client.resolveProcessorId();
       this._processorId = pid;
       this.log.info(`Using processorId=${pid}`);
+
+      // Validate credentials and connectivity up front.
+      try {
+        await this.client.getState();
+      } catch (e) {
+        this.log.error(`Initial getState failed: ${e?.message || e}`);
+      }
 
       // Optional: expose environment sensors as a separate accessory.
       if (this.config.exposeEnvironment !== false) {
@@ -451,7 +476,30 @@ class SleeptrackerPlatform {
           .setCharacteristic(this.Characteristic.Model, 'Adjustable Base')
           .setCharacteristic(this.Characteristic.SerialNumber, String(pid));
 
-        new SleeptrackerMomentarySwitch(this, accessory, cmd);
+        const sw = new SleeptrackerMomentarySwitch(this, accessory, cmd);
+        if (Number(cmd.command) === 230) {
+          this._bedLightSwitches.push(sw);
+        }
+      }
+
+      // Poll bed light state to keep HomeKit switch in sync.
+      if (this._bedLightSwitches.length > 0) {
+        const intervalSeconds = Number(this.config.statusPollIntervalSeconds || 15);
+        const poll = async () => {
+          try {
+            const on = await this.client.getSafetyLightOn();
+            if (on !== null) {
+              for (const sw of this._bedLightSwitches) {
+                sw.setExternalState(on);
+              }
+            }
+          } catch (e) {
+            this.log.warn(`Bed Light poll failed: ${e?.message || e}`);
+          }
+        };
+        await poll();
+        this._statusInterval = setInterval(poll, Math.max(5, intervalSeconds) * 1000);
+        this._statusInterval.unref?.();
       }
     } catch (e) {
       this.log.error(`Failed to initialize Sleeptracker platform: ${e?.message || e}`);

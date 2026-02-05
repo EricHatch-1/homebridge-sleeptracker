@@ -61,6 +61,7 @@ In Homebridge UI → Plugins → Homebridge Sleeptracker → Settings (or edit `
 Notes:
 - `processorId` is optional. If omitted, the plugin calls `getActiveSleeptracker` to resolve it.
 - `exposeEnvironment` (default true) exposes Temperature/Humidity/CO2/VOC/Air Quality as HomeKit sensors.
+- `statusPollIntervalSeconds` (default 15) controls how often the Bed Light state is refreshed.
 - Credentials live in your Homebridge config; **don’t share** `config.json` publicly.
 - If you change the `commands` list, Homebridge may keep old cached accessories. In that case, remove the stale accessories in the Home app, or delete the cached accessories in Homebridge and restart.
 - The Bed Light uses the same command (`230`) for both a momentary **Toggle Bed Light** switch and the **stateful Bed Light** behavior. Keep whichever behavior matches your preference.

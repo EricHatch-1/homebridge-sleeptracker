@@ -56,6 +56,12 @@
         "description": "Temperature, humidity, CO2, VOC, and air quality sensors.",
         "default": true
       },
+      "statusPollIntervalSeconds": {
+        "title": "Bed light poll interval (seconds)",
+        "type": "integer",
+        "description": "How often to refresh the Bed Light state. Minimum 5 seconds.",
+        "default": 15
+      },
       "commands": {
         "title": "Commands",
         "type": "array",

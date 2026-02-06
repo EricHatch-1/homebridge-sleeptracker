@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.4
+- Adds state polling to keep the Bed Light switch state in sync.
+- Adds `statusPollIntervalSeconds` to control the polling interval.
+
 ## 0.3.3
 - Removes massage adjustment from the Homebridge UI config.
 

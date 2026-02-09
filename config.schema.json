@@ -6,11 +6,15 @@
   "footerDisplay": "Creates momentary switches in Apple Home.",
   "schema": {
     "type": "object",
+    "required": [
+      "name",
+      "email",
+      "password"
+    ],
     "properties": {
       "name": {
         "title": "Name",
         "type": "string",
-        "required": true,
         "minLength": 1,
         "default": "Sleeptracker"
       },
@@ -18,14 +22,12 @@
         "title": "Email",
         "type": "string",
         "format": "email",
-        "required": true,
         "placeholder": "you@example.com"
       },
       "password": {
         "title": "Password",
         "type": "string",
-        "format": "password",
-        "required": true
+        "format": "password"
       },
       "namespace": {
         "title": "Namespace (optional)",
@@ -68,9 +70,13 @@
         "description": "HomeKit switches to create. Most commands are momentary.",
         "items": {
           "type": "object",
+          "required": [
+            "name",
+            "command"
+          ],
           "properties": {
-            "name": {"type": "string", "title": "Name", "required": true},
-            "command": {"type": "integer", "title": "Command", "required": true},
+            "name": {"type": "string", "title": "Name"},
+            "command": {"type": "integer", "title": "Command"},
             "requestStatus": {"type": "boolean", "title": "Request status (optional)"}
           }
         },

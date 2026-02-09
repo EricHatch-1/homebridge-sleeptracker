@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.3.5
+- Fixes config schema required fields to satisfy verification checks.
+
 ## 0.3.4
 - Adds state polling to keep the Bed Light switch state in sync.
 - Adds `statusPollIntervalSeconds` to control the polling interval.

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.6
+- Adds polite auth backoff and disables API calls after repeated auth failures.
+- Populates accessory info from device metadata (model/serial/firmware).
+- Expands default commands and documents advanced commands.
+
 ## 0.3.5
 - Fixes config schema required fields to satisfy verification checks.
 

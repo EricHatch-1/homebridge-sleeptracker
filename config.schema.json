@@ -52,6 +52,20 @@
         "description": "Defaults to the official app version. Change only if instructed.",
         "default": "3.2.5"
       },
+      "authFailureCooldownSeconds": {
+        "title": "Auth failure cooldown (seconds)",
+        "type": "integer",
+        "description": "After a failed login, wait this long before retrying. Helps avoid hammering the API.",
+        "minimum": 0,
+        "default": 300
+      },
+      "authMaxFailures": {
+        "title": "Max auth failures before disable",
+        "type": "integer",
+        "description": "Disable API calls after this many consecutive auth failures (until restart).",
+        "minimum": 0,
+        "default": 5
+      },
       "exposeEnvironment": {
         "title": "Expose environment sensors",
         "type": "boolean",
@@ -62,6 +76,7 @@
         "title": "Bed light poll interval (seconds)",
         "type": "integer",
         "description": "How often to refresh the Bed Light state. Minimum 5 seconds.",
+        "minimum": 5,
         "default": 15
       },
       "commands": {
@@ -75,33 +90,157 @@
             "command"
           ],
           "properties": {
-            "name": {"type": "string", "title": "Name"},
-            "command": {"type": "integer", "title": "Command"},
-            "requestStatus": {"type": "boolean", "title": "Request status (optional)"}
+            "name": {
+              "type": "string",
+              "title": "Name"
+            },
+            "command": {
+              "type": "integer",
+              "title": "Command"
+            },
+            "requestStatus": {
+              "type": "boolean",
+              "title": "Request status (optional)"
+            }
           }
         },
         "default": [
-          {"name": "Flat", "command": 2},
-          {"name": "Zero-G", "command": 0},
-          {"name": "TV Position", "command": 3},
-          {"name": "Anti-Snore", "command": 4},
-          {"name": "Favorite 1", "command": 6},
-          {"name": "Favorite 2", "command": 9},
-          {"name": "Toggle Bed Light", "command": 230},
-          {"name": "Massage On", "command": 200},
-          {"name": "Massage Off", "command": 201},
-          {"name": "Massage Pattern Step", "command": 226},
-          {"name": "Head Up (Increment)", "command": 110},
-          {"name": "Head Down (Increment)", "command": 111},
-          {"name": "Foot Up (Increment)", "command": 112},
-          {"name": "Foot Down (Increment)", "command": 113},
-          {"name": "Lumbar Up (Increment)", "command": 114},
-          {"name": "Lumbar Down (Increment)", "command": 115},
-          {"name": "Stop All", "command": 1},
-          {"name": "Stop Everything", "command": 31},
-          {"name": "Head Stop", "command": 107},
-          {"name": "Foot Stop", "command": 108},
-          {"name": "Lumbar Stop", "command": 106}
+          {
+            "name": "Zero-G",
+            "command": 0
+          },
+          {
+            "name": "Stop All",
+            "command": 1
+          },
+          {
+            "name": "Flat",
+            "command": 2
+          },
+          {
+            "name": "TV Position",
+            "command": 3
+          },
+          {
+            "name": "Anti-Snore",
+            "command": 4
+          },
+          {
+            "name": "Favorite 1",
+            "command": 6
+          },
+          {
+            "name": "Favorite 2",
+            "command": 9
+          },
+          {
+            "name": "Stop Massagers",
+            "command": 30
+          },
+          {
+            "name": "Stop Everything",
+            "command": 31
+          },
+          {
+            "name": "Head Up",
+            "command": 100
+          },
+          {
+            "name": "Head Down",
+            "command": 101
+          },
+          {
+            "name": "Foot Up",
+            "command": 102
+          },
+          {
+            "name": "Foot Down",
+            "command": 103
+          },
+          {
+            "name": "Lumbar Up",
+            "command": 104
+          },
+          {
+            "name": "Lumbar Down",
+            "command": 105
+          },
+          {
+            "name": "Lumbar Stop",
+            "command": 106
+          },
+          {
+            "name": "Head Stop",
+            "command": 107
+          },
+          {
+            "name": "Foot Stop",
+            "command": 108
+          },
+          {
+            "name": "Head Up (Increment)",
+            "command": 110
+          },
+          {
+            "name": "Head Down (Increment)",
+            "command": 111
+          },
+          {
+            "name": "Foot Up (Increment)",
+            "command": 112
+          },
+          {
+            "name": "Foot Down (Increment)",
+            "command": 113
+          },
+          {
+            "name": "Lumbar Up (Increment)",
+            "command": 114
+          },
+          {
+            "name": "Lumbar Down (Increment)",
+            "command": 115
+          },
+          {
+            "name": "Head Tilt Stop",
+            "command": 122
+          },
+          {
+            "name": "Head Tilt Up (Increment)",
+            "command": 123
+          },
+          {
+            "name": "Head Tilt Down (Increment)",
+            "command": 124
+          },
+          {
+            "name": "Massage On",
+            "command": 200
+          },
+          {
+            "name": "Massage Off",
+            "command": 201
+          },
+          {
+            "name": "Massage Head",
+            "command": 210
+          },
+          {
+            "name": "Massage Foot",
+            "command": 211
+          },
+          {
+            "name": "Toggle Massage",
+            "command": 225
+          },
+          {
+            "name": "Massage Pattern Step",
+            "command": 226
+          },
+          {
+            "name": "Toggle Bed Light",
+            "command": 230
+          }
         ]
       }
     }

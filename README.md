@@ -145,6 +145,8 @@ These are **not** included by default. Use only if your base supports them.
 | Start Wind Down 2 | 22 |
 | Head Tilt Up | 120 |
 | Head Tilt Down | 121 |
+| HZ Massage 28 | 212 |
+| HZ Massage 40 | 213 |
 | Toggle Timer | 231 |
 | Start Speaker Sync | 240 |
 | Stop Speaker Sync | 241 |

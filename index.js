@@ -25,12 +25,92 @@ class SleeptrackerClient {
     this.token = null;
     this.tokenExp = 0;
     this.processorId = this.processorIdOverride;
+    this.lastActive = null;
+    this.lastSleeptracker = null;
+
+    const cooldown = Number(config.authFailureCooldownSeconds);
+    const maxFailures = Number(config.authMaxFailures);
+    this.authFailureCooldownSeconds = Number.isFinite(cooldown) ? Math.max(0, cooldown) : 300;
+    this.authMaxFailures = Number.isFinite(maxFailures) ? Math.max(0, maxFailures) : 5;
+    this.authFailureCount = 0;
+    this.authDisabledUntil = 0;
+    this.authPermanentlyDisabled = false;
 
     this.http = axios.create({ timeout: 30000 });
   }
 
   _makeId(prefix='HB') {
     return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
+  }
+
+  _nowSec() {
+    return Math.floor(Date.now() / 1000);
+  }
+
+  _isAuthDisabled() {
+    if (this.authPermanentlyDisabled) return true;
+    return this.authDisabledUntil && this.authDisabledUntil > this._nowSec();
+  }
+
+  _recordAuthFailure(status) {
+    this.authFailureCount += 1;
+    const now = this._nowSec();
+    if (this.authMaxFailures > 0 && this.authFailureCount >= this.authMaxFailures) {
+      this.authPermanentlyDisabled = true;
+      this.authDisabledUntil = Number.MAX_SAFE_INTEGER;
+      this.log.error(`Auth failed ${this.authFailureCount} times; disabling API calls until restart or config change.`);
+      return;
+    }
+    if (this.authFailureCooldownSeconds > 0) {
+      this.authDisabledUntil = now + this.authFailureCooldownSeconds;
+      const remaining = this.authDisabledUntil - now;
+      const statusText = status ? `status ${status}` : 'unknown status';
+      this.log.warn(`Auth failed (${statusText}); retrying in ${remaining}s. Check email/password/namespace.`);
+    }
+  }
+
+  _sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  _isTransientError(err) {
+    const code = err?.code;
+    if (code && ['ECONNABORTED', 'ENOTFOUND', 'EAI_AGAIN', 'ECONNRESET', 'ETIMEDOUT', 'EHOSTUNREACH', 'ENETUNREACH'].includes(code)) {
+      return true;
+    }
+    const status = err?.response?.status;
+    return Boolean(status && status >= 500);
+  }
+
+  _formatError(err) {
+    const status = err?.response?.status;
+    const data = err?.response?.data;
+    const statusCode = data && typeof data === 'object' ? data.statusCode : undefined;
+    const statusMessage = data && typeof data === 'object' ? data.statusMessage : undefined;
+    const code = err?.code;
+    const parts = [];
+    if (err?.code === 'AUTH_DISABLED') {
+      parts.push('auth_disabled');
+    }
+    parts.push(err?.message || String(err));
+    if (code) parts.push(`code=${code}`);
+    if (status) parts.push(`http=${status}`);
+    if (statusCode != null) parts.push(`statusCode=${statusCode}`);
+    if (statusMessage) parts.push(`statusMessage=${statusMessage}`);
+    return parts.join(' ');
+  }
+
+  _logStatus(data, context) {
+    if (!data || typeof data !== 'object') return;
+    const statusCode = data.statusCode;
+    if (typeof statusCode === 'number' && statusCode !== 0) {
+      const msg = data.statusMessage ? `: ${data.statusMessage}` : '';
+      this.log.warn(`${context} returned statusCode=${statusCode}${msg}`);
+    }
+  }
+
+  formatError(err) {
+    return this._formatError(err);
   }
 
   async _refreshToken() {
@@ -51,11 +131,21 @@ class SleeptrackerClient {
       id: 'Android: getNewSession',
     };
 
-    const resp = await this.http.post(url, body, {
-      headers: {
-        Authorization: `Basic ${basic}`,
-      },
-    });
+    let resp;
+    try {
+      resp = await this.http.post(url, body, {
+        headers: {
+          Authorization: `Basic ${basic}`,
+        },
+      });
+    } catch (err) {
+      const status = err?.response?.status;
+      if (status === 401 || status === 403) {
+        this._recordAuthFailure(status);
+      }
+      this.log.error(`Auth failed: ${this._formatError(err)}`);
+      throw err;
+    }
 
     const data = resp.data;
     if (!data || !data.token) {
@@ -64,12 +154,20 @@ class SleeptrackerClient {
 
     this.token = data.token;
     this.tokenExp = Number(data.expirationTimeSecs || 0);
+    this.authFailureCount = 0;
+    this.authDisabledUntil = 0;
+    this.authPermanentlyDisabled = false;
 
     // Don’t log secrets.
     this.log.debug(`Got token exp=${this.tokenExp}`);
   }
 
   async _ensureToken() {
+    if (this._isAuthDisabled()) {
+      const err = new Error('Auth temporarily disabled due to repeated failures');
+      err.code = 'AUTH_DISABLED';
+      throw err;
+    }
     const now = Math.floor(Date.now() / 1000);
     if (!this.token || (this.tokenExp - now) < 60) {
       await this._refreshToken();
@@ -77,31 +175,57 @@ class SleeptrackerClient {
     return this.token;
   }
 
-  async _call(path, payload) {
-    const token = await this._ensureToken();
+  async _call(path, payload, context = path) {
     const url = `${this.fpcsiotBase}${path}`;
     const body = Object.assign({}, payload);
     body.clientID = body.clientID || 'sleeptracker-android-tsi';
     body.clientVersion = body.clientVersion || this.appClientVersion;
     body.id = body.id || this._makeId('HB');
 
-    try {
-      const resp = await this.http.post(url, body, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return resp.data;
-    } catch (err) {
-      const status = err?.response?.status;
-      if (status === 401 || status === 403) {
-        this.token = null;
-        const token2 = await this._ensureToken();
-        const resp2 = await this.http.post(url, body, {
-          headers: { Authorization: `Bearer ${token2}` },
-        });
-        return resp2.data;
-      }
+    if (this._isAuthDisabled()) {
+      const err = new Error('Auth temporarily disabled due to repeated failures');
+      err.code = 'AUTH_DISABLED';
       throw err;
     }
+    const maxAttempts = 3;
+    let lastErr;
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      const token = await this._ensureToken();
+      try {
+        const resp = await this.http.post(url, body, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = resp.data;
+        this._logStatus(data, context);
+        return data;
+      } catch (err) {
+        const status = err?.response?.status;
+        if (status === 401 || status === 403) {
+          this.token = null;
+          lastErr = err;
+          if (attempt < maxAttempts) {
+            continue;
+          }
+        }
+        if (this._isTransientError(err) && attempt < maxAttempts) {
+          const base = 500 * (2 ** (attempt - 1));
+          const jitter = Math.floor(Math.random() * 200);
+          const delay = base + jitter;
+          this.log.debug(`${context} failed (${this._formatError(err)}); retrying in ${delay}ms`);
+          await this._sleep(delay);
+          lastErr = err;
+          continue;
+        }
+        throw err;
+      }
+    }
+    throw lastErr || new Error(`${context} failed`);
+  }
+
+  async getActiveSleeptracker() {
+    const data = await this._call('/processor/getActiveSleeptracker', {}, 'getActiveSleeptracker');
+    this.lastActive = data;
+    return data;
   }
 
   async resolveProcessorId() {
@@ -112,7 +236,7 @@ class SleeptrackerClient {
     if (this.processorId != null) {
       return this.processorId;
     }
-    const data = await this._call('/processor/getActiveSleeptracker', {});
+    const data = await this.getActiveSleeptracker();
     const pid = data.sleeptrackerProcessorID ?? data.processorID;
     if (pid == null) {
       throw new Error('Could not determine sleeptrackerProcessorID');
@@ -125,7 +249,7 @@ class SleeptrackerClient {
     const body = { bedControlCommand: Number(command) };
     if (massageAdjustment != null) body.massageAdjustment = Number(massageAdjustment);
     if (requestStatus != null) body.requestStatus = Boolean(requestStatus);
-    return await this._call('/processor/adjustableBaseControls', body);
+    return await this._call('/processor/adjustableBaseControls', body, 'adjustableBaseControls');
   }
 
   async requestStatusSnapshot() {
@@ -160,14 +284,23 @@ class SleeptrackerClient {
     const pid = await this.resolveProcessorId();
     return await this._call('/processor/latestEnvironmentSensorData', {
       sleeptrackerProcessorID: pid,
-    });
+    }, 'latestEnvironmentSensorData');
   }
 
   async getState() {
     const pid = await this.resolveProcessorId();
     return await this._call('/processor/getState', {
       sleeptrackerProcessorID: pid,
-    });
+    }, 'getState');
+  }
+
+  async getSleeptracker() {
+    const pid = await this.resolveProcessorId();
+    const data = await this._call('/processor/getSleeptracker', {
+      sleeptrackerProcessorID: pid,
+    }, 'getSleeptracker');
+    this.lastSleeptracker = data;
+    return data;
   }
 }
 
@@ -199,10 +332,14 @@ class SleeptrackerEnvironmentAccessory {
       updated: 0,
     };
 
-    accessory.getService(platform.Service.AccessoryInformation)
-      .setCharacteristic(platform.Characteristic.Manufacturer, 'Sleeptracker')
-      .setCharacteristic(platform.Characteristic.Model, 'Adjustable Base')
-      .setCharacteristic(platform.Characteristic.SerialNumber, String(platform._processorId || 'unknown'));
+    if (typeof platform._applyAccessoryInfo === 'function') {
+      platform._applyAccessoryInfo(accessory);
+    } else {
+      accessory.getService(platform.Service.AccessoryInformation)
+        .setCharacteristic(platform.Characteristic.Manufacturer, 'Sleeptracker')
+        .setCharacteristic(platform.Characteristic.Model, 'Adjustable Base')
+        .setCharacteristic(platform.Characteristic.SerialNumber, String(platform._processorId || 'unknown'));
+    }
 
     this.tempService = accessory.getService(platform.Service.TemperatureSensor)
       || accessory.addService(platform.Service.TemperatureSensor, 'Bed Temperature');
@@ -323,7 +460,8 @@ class SleeptrackerMomentarySwitch {
         this._isOn = !!v;
         return this._isOn;
       } catch (e) {
-        this.log.warn(`Bed Light status failed: ${e?.message || e}`);
+        const msg = typeof this.client.formatError === 'function' ? this.client.formatError(e) : (e?.message || e);
+        this.log.warn(`Bed Light status failed: ${msg}`);
         return this._isOn;
       }
     }
@@ -345,7 +483,8 @@ class SleeptrackerMomentarySwitch {
           this._isOn = !!v;
         }
       } catch (e) {
-        this.log.error(`Bed Light failed: ${e?.message || e}`);
+        const msg = typeof this.client.formatError === 'function' ? this.client.formatError(e) : (e?.message || e);
+        this.log.error(`Bed Light failed: ${msg}`);
       }
       this.service.updateCharacteristic(this.platform.Characteristic.On, this._isOn);
       return;
@@ -367,7 +506,8 @@ class SleeptrackerMomentarySwitch {
       });
       this.log.info(`Sent command ${this.cmd.command} (${this.cmd.name})`);
     } catch (e) {
-      this.log.error(`Command failed (${this.cmd.command} ${this.cmd.name}): ${e?.message || e}`);
+      const msg = typeof this.client.formatError === 'function' ? this.client.formatError(e) : (e?.message || e);
+      this.log.error(`Command failed (${this.cmd.command} ${this.cmd.name}): ${msg}`);
     }
 
     setTimeout(() => {
@@ -420,17 +560,76 @@ class SleeptrackerPlatform {
     this.accessories.push(accessory);
   }
 
+  _applyAccessoryInfo(accessory) {
+    const info = accessory.getService(this.Service.AccessoryInformation);
+    if (!info) return;
+
+    const device = this._deviceInfo || {};
+    const serial = device.processorSerialNumber
+      || device.powerBaseSerialNumber
+      || device.scannedSerialNumber
+      || device.barcode
+      || this._processorId;
+    const model = device.modelID ? `Model ${device.modelID}` : 'Adjustable Base';
+
+    info.setCharacteristic(this.Characteristic.Manufacturer, 'Sleeptracker');
+    info.setCharacteristic(this.Characteristic.Model, model);
+    if (serial) info.setCharacteristic(this.Characteristic.SerialNumber, String(serial));
+    if (device.processorVersionFirmware != null) {
+      info.setCharacteristic(this.Characteristic.FirmwareRevision, String(device.processorVersionFirmware));
+    }
+    if (device.processorVersionHardware != null) {
+      info.setCharacteristic(this.Characteristic.HardwareRevision, String(device.processorVersionHardware));
+    }
+    if (device.processorVersionOS != null) {
+      info.setCharacteristic(this.Characteristic.SoftwareRevision, String(device.processorVersionOS));
+    }
+  }
+
+  _normalizeCommand(raw) {
+    if (!raw) return null;
+    const command = Number(raw.command);
+    if (!Number.isFinite(command)) {
+      return null;
+    }
+    const nameRaw = typeof raw.name === 'string' ? raw.name.trim() : '';
+    const name = nameRaw || `Command ${command}`;
+    const cmd = { name, command };
+    if (raw.massageAdjustment != null && Number.isFinite(Number(raw.massageAdjustment))) {
+      cmd.massageAdjustment = Number(raw.massageAdjustment);
+    }
+    if (typeof raw.requestStatus === 'boolean') {
+      cmd.requestStatus = raw.requestStatus;
+    }
+    return cmd;
+  }
+
   async discoverDevices() {
     try {
       const pid = await this.client.resolveProcessorId();
       this._processorId = pid;
       this.log.info(`Using processorId=${pid}`);
 
+      let deviceInfo = null;
+      try {
+        deviceInfo = await this.client.getSleeptracker();
+      } catch (e) {
+        if (e?.code !== 'AUTH_DISABLED') {
+          this.log.warn(`getSleeptracker failed: ${this.client.formatError(e)}`);
+        }
+      }
+      if (!deviceInfo) {
+        deviceInfo = this.client.lastActive;
+      }
+      this._deviceInfo = deviceInfo;
+
       // Validate credentials and connectivity up front.
       try {
         await this.client.getState();
       } catch (e) {
-        this.log.error(`Initial getState failed: ${e?.message || e}`);
+        if (e?.code !== 'AUTH_DISABLED') {
+          this.log.error(`Initial getState failed: ${this.client.formatError(e)}`);
+        }
       }
 
       // Optional: expose environment sensors as a separate accessory.
@@ -450,7 +649,9 @@ class SleeptrackerPlatform {
             const env = await this.client.getLatestEnvironment();
             this._envAccessory.updateFromEnv(env);
           } catch (e) {
-            this.log.warn(`Env poll failed: ${e?.message || e}`);
+            if (e?.code !== 'AUTH_DISABLED') {
+              this.log.warn(`Env poll failed: ${this.client.formatError(e)}`);
+            }
           }
         };
         await poll();
@@ -459,22 +660,24 @@ class SleeptrackerPlatform {
       }
 
       const commands = Array.isArray(this.config.commands) ? this.config.commands : [];
-      for (const cmd of commands) {
-        const name = cmd.name || `Command ${cmd.command}`;
+      for (const raw of commands) {
+        const cmd = this._normalizeCommand(raw);
+        if (!cmd) {
+          this.log.warn(`Skipping command with invalid config: ${JSON.stringify(raw)}`);
+          continue;
+        }
+        const name = cmd.name;
         const uuid = this.api.hap.uuid.generate(`sleeptracker:${pid}:${name}:${cmd.command}`);
 
         let accessory = this.accessories.find(a => a.UUID === uuid);
         if (!accessory) {
           accessory = new this.api.platformAccessory(name, uuid);
-          accessory.context.cmd = cmd;
           this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
           this.accessories.push(accessory);
         }
 
-        accessory.getService(this.Service.AccessoryInformation)
-          .setCharacteristic(this.Characteristic.Manufacturer, 'Sleeptracker')
-          .setCharacteristic(this.Characteristic.Model, 'Adjustable Base')
-          .setCharacteristic(this.Characteristic.SerialNumber, String(pid));
+        accessory.context.cmd = cmd;
+        this._applyAccessoryInfo(accessory);
 
         const sw = new SleeptrackerMomentarySwitch(this, accessory, cmd);
         if (Number(cmd.command) === 230) {
@@ -494,7 +697,9 @@ class SleeptrackerPlatform {
               }
             }
           } catch (e) {
-            this.log.warn(`Bed Light poll failed: ${e?.message || e}`);
+            if (e?.code !== 'AUTH_DISABLED') {
+              this.log.warn(`Bed Light poll failed: ${this.client.formatError(e)}`);
+            }
           }
         };
         await poll();
@@ -502,7 +707,8 @@ class SleeptrackerPlatform {
         this._statusInterval.unref?.();
       }
     } catch (e) {
-      this.log.error(`Failed to initialize Sleeptracker platform: ${e?.message || e}`);
+      const msg = this.client ? this.client.formatError(e) : (e?.message || e);
+      this.log.error(`Failed to initialize Sleeptracker platform: ${msg}`);
     }
   }
 }
